@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Todo App</title>
+  <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: system-ui, sans-serif; background: #f5f5f0; min-height: 100vh; display: flex; justify-content: center; padding: 2rem 1rem; }
+    .app { width: 100%; max-width: 560px; }
+    .title { font-size: 22px; font-weight: 600; color: #111; }
+    .subtitle { font-size: 13px; color: #888; margin-top: 2px; margin-bottom: 1.5rem; }
+    .add-row { display: flex; gap: 8px; margin-bottom: 1rem; }
+    .add-row input { flex: 1; height: 38px; padding: 0 12px; font-size: 14px; border: 1px solid #ddd; border-radius: 8px; outline: none; background: white; }
+    .add-row input:focus { border-color: #4a90e2; box-shadow: 0 0 0 3px rgba(74,144,226,0.15); }
+    .add-row select { height: 38px; padding: 0 8px; border: 1px solid #ddd; border-radius: 8px; font-size: 13px; background: white; cursor: pointer; }
+    .add-row button { height: 38px; padding: 0 16px; font-size: 14px; font-weight: 500; border: 1px solid #ddd; border-radius: 8px; background: white; cursor: pointer; }
+    .add-row button:hover { background: #f0f0f0; }
+    .filters { display: flex; gap: 6px; margin-bottom: 1rem; }
+    .filter-btn { height: 28px; padding: 0 14px; font-size: 12px; border: 1px solid #e0e0e0; border-radius: 100px; background: transparent; color: #888; cursor: pointer; }
+    .filter-btn.active { background: #111; color: white; border-color: #111; font-weight: 500; }
+    .todo-list { display: flex; flex-direction: column; gap: 6px; }
+    .todo-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #e8e8e8; border-radius: 8px; background: white; }
+    .todo-item.done { opacity: 0.5; }
+    .checkbox { width: 20px; height: 20px; border: 1.5px solid #ccc; border-radius: 5px; flex-shrink: 0; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+    .checkbox.checked { background: #4a90e2; border-color: #4a90e2; }
+    .todo-text { flex: 1; font-size: 14px; cursor: text; }
+    .todo-text.done { text-decoration: line-through; color: #aaa; }
+    .todo-text input { width: 100%; font-size: 14px; border: none; outline: none; font-family: inherit; }
+    .badge { font-size: 11px; padding: 2px 8px; border-radius: 100px; font-weight: 500; }
+    .p-high { background: #fde8e8; color: #b91c1c; }
+    .p-med  { background: #fef3c7; color: #b45309; }
+    .p-low  { background: #dcfce7; color: #15803d; }
+    .priority-sel { font-size: 12px; border: 1px solid #e0e0e0; border-radius: 4px; background: white; padding: 1px 4px; cursor: pointer; }
+    .del-btn { width: 26px; height: 26px; border: none; background: transparent; color: #bbb; cursor: pointer; border-radius: 4px; font-size: 18px; line-height: 1; }
+    .del-btn:hover { background: #f5f5f5; color: #333; }
+    .empty { text-align: center; padding: 2.5rem 0; color: #bbb; font-size: 14px; }
+    .footer { margin-top: 1rem; font-size: 12px; color: #aaa; display: flex; justify-content: space-between; }
+    .clear-btn { font-size: 12px; border: none; background: transparent; color: #aaa; cursor: pointer; }
+    .clear-btn:hover { color: #333; text-decoration: underline; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+
+<script type="text/babel">
+const { useState, useRef } = React;
+
+function CheckIcon() {
+  return (
+    <svg width="11" height="11" viewBox="0 0 11 11" fill="none">
+      <path d="M2 5.5l2.5 2.5L9 3" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+function TodoItem({ todo, onToggle, onDelete, onEdit, onPriority }) {
+  const [editing, setEditing] = useState(false);
+  const [val, setVal] = useState(todo.text);
+  const ref = useRef();
+
+  function startEdit() {
+    setEditing(true);
+    setTimeout(() => ref.current?.focus(), 0);
+  }
+
+  function save() {
+    const t = val.trim();
+    if (t) onEdit(todo.id, t);
+    else setVal(todo.text);
+    setEditing(false);
+  }
+
+  return (
+    <div className={`todo-item${todo.done ? ' done' : ''}`}>
+      <div className={`checkbox${todo.done ? ' checked' : ''}`} onClick={() => onToggle(todo.id)}>
+        {todo.done && <CheckIcon />}
+      </div>
+      <div className={`todo-text${todo.done ? ' done' : ''}`} style={{ flex: 1 }}>
+        {editing
+          ? <input ref={ref} value={val} onChange={e => setVal(e.target.value)}
+              onBlur={save}
+              onKeyDown={e => { if (e.key === 'Enter') save(); if (e.key === 'Escape') { setVal(todo.text); setEditing(false); } }} />
+          : <span onDoubleClick={startEdit}>{todo.text}</span>
+        }
+      </div>
+      <select className="priority-sel" value={todo.priority} onChange={e => onPriority(todo.id, e.target.value)}>
+        <option value="high">High</option>
+        <option value="med">Med</option>
+        <option value="low">Low</option>
+      </select>
+      <span className={`badge p-${todo.priority}`}>
+        {todo.priority === 'high' ? 'High' : todo.priority === 'med' ? 'Med' : 'Low'}
+      </span>
+      <button className="del-btn" onClick={() => onDelete(todo.id)}>×</button>
+    </div>
+  );
+}
+
+function App() {
+  const [todos, setTodos] = useState([
+    { id: 1, text: 'Design the landing page', done: false, priority: 'high' },
+    { id: 2, text: 'Review pull requests', done: true, priority: 'med' },
+    { id: 3, text: 'Write unit tests', done: false, priority: 'low' },
+  ]);
+  const [input, setInput] = useState('');
+  const [priority, setPriority] = useState('med');
+  const [filter, setFilter] = useState('all');
+  const [nextId, setNextId] = useState(4);
+
+  function addTodo() {
+    const t = input.trim();
+    if (!t) return;
+    setTodos(prev => [...prev, { id: nextId, text: t, done: false, priority }]);
+    setNextId(n => n + 1);
+    setInput('');
+  }
+
+  const toggle = id => setTodos(prev => prev.map(t => t.id === id ? { ...t, done: !t.done } : t));
+  const del = id => setTodos(prev => prev.filter(t => t.id !== id));
+  const edit = (id, text) => setTodos(prev => prev.map(t => t.id === id ? { ...t, text } : t));
+  const setPri = (id, p) => setTodos(prev => prev.map(t => t.id === id ? { ...t, priority: p } : t));
+  const clearDone = () => setTodos(prev => prev.filter(t => !t.done));
+
+  const filtered = todos.filter(t =>
+    filter === 'all' ? true : filter === 'active' ? !t.done : t.done
+  );
+  const doneCount = todos.filter(t => t.done).length;
+
+  return (
+    <div className="app">
+      <h1 className="title">My tasks</h1>
+      <p className="subtitle">{todos.length - doneCount} remaining · {doneCount} completed</p>
+
+      <div className="add-row">
+        <input
+          placeholder="Add a new task…"
+          value={input}
+          onChange={e => setInput(e.target.value)}
+          onKeyDown={e => e.key === 'Enter' && addTodo()}
+        />
+        <select value={priority} onChange={e => setPriority(e.target.value)}>
+          <option value="high">High</option>
+          <option value="med">Med</option>
+          <option value="low">Low</option>
+        </select>
+        <button onClick={addTodo}>+ Add</button>
+      </div>
+
+      <div className="filters">
+        {['all', 'active', 'done'].map(f => (
+          <button key={f} className={`filter-btn${filter === f ? ' active' : ''}`} onClick={() => setFilter(f)}>
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+          </button>
+        ))}
+      </div>
+
+      <div className="todo-list">
+        {filtered.length === 0
+          ? <div className="empty">{filter === 'done' ? 'No completed tasks yet' : 'Nothing here — add a task above'}</div>
+          : filtered.map(todo => (
+              <TodoItem key={todo.id} todo={todo} onToggle={toggle} onDelete={del} onEdit={edit} onPriority={setPri} />
+            ))
+        }
+      </div>
+
+      {todos.length > 0 && (
+        <div className="footer">
+          <span>{todos.length} total tasks</span>
+          {doneCount > 0 && <button className="clear-btn" onClick={clearDone}>Clear {doneCount} completed</button>}
+        </div>
+      )}
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+</body>
+</html>
